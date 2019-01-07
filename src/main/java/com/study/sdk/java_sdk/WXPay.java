@@ -7,7 +7,7 @@ import com.study.sdk.java_sdk.WXPayConstants.SignType;
 public class WXPay {
 
     private WXPayConfig config;
-    private WXPayConstants.SignType signType;
+    private SignType signType;
     private boolean autoReport;
     private boolean useSandbox;
     private String notifyUrl;

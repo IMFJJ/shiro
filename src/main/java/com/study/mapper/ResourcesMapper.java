@@ -10,7 +10,7 @@ public interface ResourcesMapper extends MyMapper<Resources> {
 
     public List<Resources> queryAll();
 
-    public List<Resources> loadUserResources(Map<String,Object> map);
+    public List<Resources> loadUserResources(Map<String, Object> map);
 
     public List<Resources> queryResourcesListWithSelected(Integer rid);
 }

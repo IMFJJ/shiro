@@ -26,9 +26,9 @@ import java.util.Map;
  */
 @Controller
 public class HomeController {
-    private String getAccessToken = "https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code";// 用户凭证
+    private String getAccessToken = " https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code";// 用户凭证
     private static String appId = "wx2a0f9f8c288435cf";//	公众号的唯一标识
-    private static String appSecret = "63455b7c329301d0ec72e6688d8e3ca9";//公众号的appsecret
+    private static String appSecret = "0bc92acecb958502ec578b8f1447f871";//公众号的appsecret
     @RequestMapping(value="/login",method= RequestMethod.GET)
     public String login(){
         return "login";
@@ -75,20 +75,28 @@ public class HomeController {
         return "403";
     }
 
-
-    @RequestMapping("/getCode")
-    public String getCode(HttpServletRequest req, HttpServletResponse resp, String code) {
+    @RequestMapping("/code")
+    public String code(){
+        return "wx/pay";
+    }
+    @RequestMapping("/getOpenid")
+    public String getOpenid(HttpServletRequest req, HttpServletResponse resp, String code) {
         // 微信回调参数
         // TODO: 2018/6/9
-        if ("0".equals(code)) {
+        if ("0".equals(code) ) {
             //微信服务器回调code不存在，重新请求
             code=req.getParameter("code");
         }
+        if(null==code){
+            return null;
+        }
         //第二步：通过code换取网页授权access_token
-        String url = getAccessToken.replace("APPID", appId).replace("SECRET", appSecret).replace("JSCODE", code);
+        String url = getAccessToken.replace("APPID", appId).replace("SECRET", appSecret).replace("CODE", code);
         //发送post请求读取调用微信 https://api.weixin.qq.com/sns/jscode2session 接口获取openid用户唯一标识
         JSONObject jsonObject = JSON.parseObject(RanderData.sendPost(url));
-        req.setAttribute("jsonObject",jsonObject);
+        req.setAttribute("errcode",jsonObject.getString("errcode")==null?null:jsonObject.getString("errcode").toString() );
+        req.setAttribute("errmsg",jsonObject.getString("errmsg")==null?null:jsonObject.getString("errmsg").toString());
+        req.setAttribute("openid",jsonObject.getString("openid")==null?null:jsonObject.getString("openid").toString());
         try {
             //RanderData.renderData(resp,jsonObject.toString(),UserController.class);
             //返回前端

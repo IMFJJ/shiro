@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -31,6 +32,10 @@ import java.util.*;
 @Controller
 @RequestMapping(value = "/pay")
 public class WXPayController {
+    private String getAccessToken = " https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code";// 用户凭证
+    private static String appid = "wx2a0f9f8c288435cf";//	公众号的唯一标识
+    private static String appSecret = "0bc92acecb958502ec578b8f1447f871";//公众号的appsecret
+    private static String key="imfjj201314imfjj201314imfjj20131";
     private static Logger log = LoggerFactory.getLogger(WXPayController.class);
     @Resource
     IOrderMasterService orderMasterService;
@@ -57,44 +62,44 @@ public class WXPayController {
      * @param payMoney
      * @return
      */
-    @RequestMapping("/toPayInit")
+    @RequestMapping(value = "/toPayInit" ,method = RequestMethod.POST)
     @ResponseBody
-    public Map<String,Object> toPay(HttpServletRequest request,@RequestParam(value="payMoney",required=true) String payMoney, @RequestParam(value="openid",required=true) String openid){
+    public Map<String,Object> toPay(HttpServletRequest request,String payMoney, String openid){
         Map<String,Object> map = new HashMap<>();
         String orderId =String.valueOf(System.currentTimeMillis()) ;
         String noncestr =WXPayUtil.generateNonceStr();
         Map<String,String> requestMap = new HashMap<String, String>();
-        requestMap.put("appId", "wx2a0f9f8c288435cf");
+        requestMap.put("appId", appid);
         requestMap.put("openid",openid);
         requestMap.put("out_trade_no",orderId);
         requestMap.put("mch_id", "1517706041");
         requestMap.put("payMoney",payMoney);
         requestMap.put("spbill_create_ip", getIpAddr(request));
-        requestMap.put("notify_url", "/pay/paymentNotice");
+        requestMap.put("notify_url", "http://www.havelove.club/pay/paymentNotice");
         requestMap.put("noncestr", noncestr);
-        requestMap.put("body","一元联系");
-        requestMap.put("detail","获取电站用户的联系方式");
+        requestMap.put("body","test");
+//        requestMap.put("detail","获取电站用户的联系方式");
         Map<String,Object> requestInfo = WXPayUtil.createOrderInfo(requestMap);
         String orderInfo_toString = (String) requestInfo.get("orderInfo_toString");
         //判断返回码
         UnifiedOrderRespose orderResponse = WXPayUtil.httpOrder(orderInfo_toString);// 调用统一下单接口
         //根据微信文档return_code 和result_code都为SUCCESS的时候才会返回code_url
         if(null!=orderResponse  && "SUCCESS".equals(orderResponse.getReturn_code()) && "SUCCESS".equals(orderResponse.getResult_code())){
+            log.info("支付成功了");
             String timestamp = String.valueOf(WXPayUtil.getCurrentTimestamp());
-            map.put("timestamp",timestamp);
-            map.put("noncestr",noncestr);
-            UnifiedOrderRequest unifiedOrderRequest = (UnifiedOrderRequest) requestInfo.get("unifiedOrderRequest");
-            map.put("unifiedOrderRequest",unifiedOrderRequest);
+            map.put("timeStamp",timestamp);
+            map.put("nonceStr", orderResponse.getNonce_str());
+//            UnifiedOrderRequest unifiedOrderRequest = (UnifiedOrderRequest) requestInfo.get("unifiedOrderRequest");
             SortedMap<String, String> packageParams = new TreeMap<String, String>();
-            packageParams.put("appId","wx2a0f9f8c288435cf");
+            packageParams.put("appId",appid);
             packageParams.put("signType","MD5");
-            packageParams.put("nonceStr", noncestr);
+            packageParams.put("nonceStr", orderResponse.getNonce_str());
             packageParams.put("timeStamp", timestamp);
             String packages = "prepay_id="+orderResponse.getPrepay_id();
             packageParams.put("package",packages);
             String sign = null;//这个梗，就是开头说的，弄了半天才弄出来的
             try {
-                sign = WXPayUtil.generateSignature(packageParams,"63455b7c329301d0ec72e6688d8e3ca9");
+                sign = WXPayUtil.createSign( "UTF-8",packageParams);
             } catch (Exception e) {
                 map.put("result",-1);
                 e.printStackTrace();
@@ -105,16 +110,19 @@ public class WXPayController {
             }else{
                 map.put("result",-1);
             }
-            map.put("prepay_id",orderResponse.getPrepay_id());
+
 
             //系统创建订单  这种方式直接创建单一商品的订单 没有order_detail相关的订单信息 默认支付状态未支付 pay_status 0
-            OrderMaster orderMaster=new OrderMaster();
-            orderMaster.setOrder_amount(new BigDecimal(payMoney));
-            orderMaster.setBuyer_name("直接支付");
-            orderMaster.setBuyer_openid(openid);
-            if(orderMasterService.add(orderMaster)!=1){
-                map.put("result",-1);
-            }
+//            OrderMaster orderMaster=new OrderMaster();
+//            orderMaster.setOrder_amount(new BigDecimal(payMoney));
+//            orderMaster.setBuyer_name("直接支付");
+//            orderMaster.setBuyer_openid(openid);
+//            if(orderMasterService.add(orderMaster)!=1){
+//                map.put("result",-1);
+//            }
+            map.put("appId",appid);
+            map.put("signType","MD5");
+            map.put("package",packages);
             return map;
         }else{ //不成功
             String text = "调用微信支付出错，返回状态码："+orderResponse.getReturn_code()+"，返回信息："+orderResponse.getReturn_msg();
@@ -222,5 +230,6 @@ public class WXPayController {
         log.error("支付通知回调结果："+xml);
         return xml;
     }
+
 
 }

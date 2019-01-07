@@ -309,68 +309,53 @@ public class WXPayUtil {
 
     /**
      * 生成订单对象信息
-     * @param orderId 订单号
-     * @param appId 微信appId
-     * @param mch_id 微信分配的商户ID
-     * @param body  支付介绍主体
-     * @param price 支付价格（放大100倍）
-     * @param spbill_create_ip 终端IP
-     * @param notify_url  异步直接结果通知接口地址
-     * @param noncestr
      * @return
      */
     public static Map<String,Object> createOrderInfo(Map<String, String> requestMap) {
         //生成订单对象
-        UnifiedOrderRequest unifiedOrderRequest = new UnifiedOrderRequest();
-        unifiedOrderRequest.setAppid(requestMap.get("appId"));//公众账号ID
-        unifiedOrderRequest.setBody(requestMap.get("body"));//商品描述
-        unifiedOrderRequest.setMch_id(requestMap.get("mch_id"));//商户号
-        unifiedOrderRequest.setNonce_str(requestMap.get("noncestr"));//随机字符串
-        unifiedOrderRequest.setNotify_url(requestMap.get("notify_url"));//通知地址
-        unifiedOrderRequest.setOpenid(requestMap.get("openid"));
-        unifiedOrderRequest.setDetail(requestMap.get("detail"));//详情
-        unifiedOrderRequest.setOut_trade_no(requestMap.get("out_trade_no"));//商户订单号
-        unifiedOrderRequest.setSpbill_create_ip(requestMap.get("spbill_create_ip"));//终端IP
-        unifiedOrderRequest.setTotal_fee(requestMap.get("payMoney"));  //金额需要扩大100倍:1代表支付时是0.01
-        unifiedOrderRequest.setTrade_type("JSAPI");//JSAPI--公众号支付、NATIVE--原生扫码支付、APP--app支付
+//        UnifiedOrderRequest unifiedOrderRequest = new UnifiedOrderRequest();
+//        unifiedOrderRequest.setAppid(requestMap.get("appId"));//公众账号ID
+//        unifiedOrderRequest.setBody(requestMap.get("body"));//商品描述
+//        unifiedOrderRequest.setMch_id(requestMap.get("mch_id"));//商户号
+//        unifiedOrderRequest.setNonce_str(requestMap.get("noncestr"));//随机字符串
+//        unifiedOrderRequest.setNotify_url(requestMap.get("notify_url"));//通知地址
+//        unifiedOrderRequest.setOpenid(requestMap.get("openid"));
+////        unifiedOrderRequest.setDetail(requestMap.get("detail"));//详情
+//        unifiedOrderRequest.setOut_trade_no(requestMap.get("out_trade_no"));//商户订单号
+//        unifiedOrderRequest.setSpbill_create_ip(requestMap.get("spbill_create_ip"));//终端IP
+//        unifiedOrderRequest.setTotal_fee(requestMap.get("payMoney"));  //金额需要扩大100倍:1代表支付时是0.01
+//        unifiedOrderRequest.setTrade_type("JSAPI");//JSAPI--公众号支付、NATIVE--原生扫码支付、APP--app支付
         SortedMap<String, String> packageParams = new TreeMap<String, String>();
-        packageParams.put("appid", unifiedOrderRequest.getAppid());
-        packageParams.put("body", unifiedOrderRequest.getBody());
-        packageParams.put("mch_id", unifiedOrderRequest.getMch_id());
-        packageParams.put("nonce_str", unifiedOrderRequest.getNonce_str());
-        packageParams.put("notify_url", unifiedOrderRequest.getNotify_url());
-        packageParams.put("openid", unifiedOrderRequest.getOpenid());
-        packageParams.put("detail", unifiedOrderRequest.getDetail());
-        packageParams.put("out_trade_no", unifiedOrderRequest.getOut_trade_no());
-        packageParams.put("spbill_create_ip", unifiedOrderRequest.getSpbill_create_ip());
-        packageParams.put("total_fee", unifiedOrderRequest.getTotal_fee());
-        packageParams.put("trade_type", unifiedOrderRequest.getTrade_type());
+        packageParams.put("appid", requestMap.get("appId"));
+        packageParams.put("body",requestMap.get("body"));
+        packageParams.put("mch_id", requestMap.get("mch_id"));
+        packageParams.put("nonce_str", requestMap.get("noncestr"));
+        packageParams.put("notify_url", requestMap.get("notify_url"));
+        packageParams.put("openid", requestMap.get("openid"));
+        packageParams.put("out_trade_no", requestMap.get("out_trade_no"));
+        packageParams.put("sign_type", "MD5");//签名类型
+        packageParams.put("spbill_create_ip", requestMap.get("spbill_create_ip"));
+        packageParams.put("total_fee", requestMap.get("payMoney"));
+        packageParams.put("trade_type","JSAPI");
+
+        packageParams.put("sign",createSign( "UTF-8", packageParams));
         try {
-            unifiedOrderRequest.setSign(generateSignature(packageParams,"63455b7c329301d0ec72e6688d8e3ca9"));//签名
+//            unifiedOrderRequest.setSign(createSign(unifiedOrderRequest));//签名
         } catch (Exception e) {
             e.printStackTrace();
         }
-        //将订单对象转为xml格式
-        xstream.alias("xml", UnifiedOrderRequest.class);//根元素名需要是xml
-        System.out.println("封装好的统一下单请求数据："+xstream.toXML(unifiedOrderRequest).replace("__", "_"));
         Map<String,Object> responseMap = new HashMap<String,Object>();
-        responseMap.put("orderInfo_toString", xstream.toXML(unifiedOrderRequest).replace("__", "_"));
-        responseMap.put("unifiedOrderRequest",unifiedOrderRequest);
+        try {
+            System.out.println("统一下单XML请求数据："+ GetMapToXML(packageParams).replace("__", "_"));
+            responseMap.put("orderInfo_toString", GetMapToXML(packageParams).replace("__", "_"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return responseMap;
     }
 
     /**
      * 生成签名
-     * @param appid_value
-     * @param mch_id_value
-     * @param productId
-     * @param nonce_str_value
-     * @param trade_type
-     * @param notify_url
-     * @param spbill_create_ip
-     * @param total_fee
-     * @param out_trade_no
-     * @return
      */
     private static String createSign(UnifiedOrderRequest unifiedOrderRequest) {
         //根据规则创建可排序的map集合
@@ -380,10 +365,12 @@ public class WXPayUtil {
         packageParams.put("mch_id", unifiedOrderRequest.getMch_id());
         packageParams.put("nonce_str", unifiedOrderRequest.getNonce_str());
         packageParams.put("notify_url", unifiedOrderRequest.getNotify_url());
+        packageParams.put("openid", unifiedOrderRequest.getOpenid());
         packageParams.put("out_trade_no", unifiedOrderRequest.getOut_trade_no());
         packageParams.put("spbill_create_ip", unifiedOrderRequest.getSpbill_create_ip());
         packageParams.put("trade_type", unifiedOrderRequest.getTrade_type());
         packageParams.put("total_fee", unifiedOrderRequest.getTotal_fee());
+        packageParams.put("sign_type", "MD5");//签名类型
         StringBuffer sb = new StringBuffer();
         Set es = packageParams.entrySet();//字典序
         Iterator it = es.iterator();
@@ -397,17 +384,40 @@ public class WXPayUtil {
             }
         }
         //第二步拼接key，key设置路径：微信商户平台(pay.weixin.qq.com)-->账户设置-->API安全-->密钥设置
-        sb.append("key="+"你的密匙");
+        sb.append("key="+"0bc92acecb958502ec578b8f1447f871");
         String sign = null;//MD5加密
         try {
             sign = MD5(sb.toString()).toUpperCase();
         } catch (Exception e) {
             e.printStackTrace();
         }
+        log.error("sb="+sb.toString());
         log.error("方式一生成的签名="+sign);
         return sign;
     }
-
+    public static String createSign(String characterEncoding,SortedMap<String,String> parameters){
+        StringBuffer sb = new StringBuffer();
+        Set es = parameters.entrySet();
+        Iterator it = es.iterator();
+        while(it.hasNext()) {
+            Map.Entry entry = (Map.Entry)it.next();
+            String k = (String)entry.getKey();
+            Object v = entry.getValue();
+            if(null != v && !"".equals(v)
+                    && !"sign".equals(k) && !"key".equals(k)) {
+                sb.append(k + "=" + v + "&");
+            }
+        }
+        sb.append("key=" + "imfjj201314imfjj201314imfjj20131");
+        System.out.println("签名："+sb.toString());
+        String sign = null;
+        try {
+            sign = WXPayUtil.MD5(sb.toString()).toUpperCase();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sign;
+    }
     private static XStream xstream = new XStream(new XppDriver() {
         public HierarchicalStreamWriter createWriter(Writer out) {
             return new PrettyPrintWriter(out) {
@@ -498,7 +508,9 @@ public class WXPayUtil {
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
             BufferedOutputStream buffOutStr = new BufferedOutputStream(conn.getOutputStream());
+            System.out.println("getBytes前统一下单XML请求数据："+ orderInfo);
             buffOutStr.write(orderInfo.getBytes("UTF-8"));
+
             buffOutStr.flush();
             buffOutStr.close();
             //获取输入流
@@ -508,9 +520,11 @@ public class WXPayUtil {
             while((line = reader.readLine())!= null){
                 sb.append(line);
             }
+            System.out.println("sb："+ sb.toString());
             //将请求返回的内容通过xStream转换为UnifiedOrderRespose对象
             xstream.alias("xml", UnifiedOrderRespose.class);
             UnifiedOrderRespose unifiedOrderRespose = (UnifiedOrderRespose)xstream.fromXML(sb.toString());
+            System.out.println("微信返回的数据:"+unifiedOrderRespose.toString());
             return unifiedOrderRespose;
         } catch (Exception e) {
             e.printStackTrace();
@@ -529,10 +543,14 @@ public class WXPayUtil {
         StringBuffer sb = new StringBuffer();
         sb.append("<xml>");
         for (Map.Entry<String,String> entry : param.entrySet()) {
+            if(!"sing".equals(entry.getKey()))
             sb.append("<"+ entry.getKey() +">");
             sb.append(entry.getValue());
             sb.append("</"+ entry.getKey() +">");
         }
+        sb.append("<sign>");
+        sb.append(param.get("sign"));
+        sb.append("</sign>");
         sb.append("</xml>");
         return sb.toString();
     }
